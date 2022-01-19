@@ -18,12 +18,12 @@ import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import com.example.tempdirectory.databinding.FragmentFirstBinding
 import com.example.tempdirectory.util.snackBar
-import android.os.Environment
 import java.io.File
 
 
 class FirstFragment : Fragment() {
 
+    private lateinit var file: File
     private var _binding: FragmentFirstBinding? = null
     private val binding get() = _binding!!
 
@@ -35,48 +35,18 @@ class FirstFragment : Fragment() {
     private val externalStoragePermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             with(binding.root) {
-//                when {
-//                    granted -> snackBar("Permission granted!")
-//                    //handle when the user denies it the first time
-//                    shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE) -> {
-//                        //this option is available starting in API 23
-//                        snackBar("Permission denied, show more info!")
-////                        gotoSettings()
-//                    }
-
-                /*
-                * Activity.shouldShowRequestPermissionRationale(String) method.
-                * This method returns true if the app has requested this permission previously and the user denied the request.
-                * */
-//                    if(shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)){
-//                        snackBar("Permission granted!")
-//                    } else if (!shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-//                        //Permission hasn't granted :( -> Ask for it..
-//                        snackBar("Permission denied, show more info!")
-//                        askExternalStoragePermission()
-//                    }
-//                    else {
-//                        snackBar("Permission denied")
-////                        gotoSettings()
-//                    }
-//                }
 
                 when {
                     granted -> {
                         snackBar("Permission granted!")
                         if (folderName != "") {
                             createFolder(folderName)
-                        }else {
-                            Toast.makeText(requireContext(), "Enter folder name first", Toast.LENGTH_SHORT).show()
+                        } else {
+                            snackBar("Enter folder name first")
                         }
                     }
-//                    shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE) -> {
-//                        //this option is available starting in API 23
-//                        snackBar("Permission denied, show more info!")
-//                        gotoSettings()
-//                    }
                     else -> {
-                        if (shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)){
+                        if (shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                             //this option is available starting in API 23
                             snackBar("Permission denied, show more info!")
                             gotoSettings()
@@ -107,13 +77,18 @@ class FirstFragment : Fragment() {
             //get folder name from et
             folderName = binding.tipFolderName.editText?.text.toString().trim()
             //check if WRITE permission is granted
-            if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
                 //Permission is granted!! .. Create Folder
-                    if (folderName != "") {
-                        createFolder(folderName)
-                    }else {
-                        Toast.makeText(requireContext(), "Enter folder name first", Toast.LENGTH_SHORT).show()
-                    }
+                if (folderName != "") {
+                    createFolder(folderName)
+                } else {
+                    Toast.makeText(requireContext(), "Enter folder name first", Toast.LENGTH_SHORT)
+                        .show()
+                }
             } else {
                 //Todo: if permissions Denied permanently by user..
                 askExternalStoragePermission()
@@ -127,20 +102,20 @@ class FirstFragment : Fragment() {
             //get folder name from et
             folderName = binding.tipFolderName.editText?.text.toString().trim()
             //Initialize uri
-            val uri = Uri.parse("${Environment.getExternalStorageDirectory()}/$folderName/")
+            val uri = Uri.parse("${context?.getExternalFilesDir(null)}/$folderName/")
             //open file manager
-            startActivity(Intent(Intent.ACTION_GET_CONTENT)
-                .setDataAndType(uri, "*/*")
+            startActivity(
+                Intent(Intent.ACTION_GET_CONTENT)
+                    .setDataAndType(uri, "*/*")
             )
         }
     }
 
-    private fun createFolder(folderName: String) {
+    private fun createFolder(folderName: String): File {
         /*
         * old approach - which isn't working
         * */
-        //Initialize file
-//        var file: File = File(Environment.getExternal(), folderName)
+/*        //Initialize file
         val file = File(Environment.getExternalStorageDirectory(), folderName)
 
         if (!file.exists()) {
@@ -161,35 +136,28 @@ class FirstFragment : Fragment() {
             }
         } else {
             Toast.makeText(requireContext(), "Folder Already Exists", Toast.LENGTH_SHORT).show()
+        }*/
+
+        /*
+        * New approach - Scoped Storage
+        * */
+
+        //Initialize file
+        file = File("${requireContext().getExternalFilesDir(null)}/$folderName")
+        if (!file.exists()) {
+            //If file hasn't created yet,
+            file.mkdir()
+            binding.root.snackBar("Created new directory: $folderName")
+        } else if (file.exists()) {
+            binding.root.snackBar("File with same name already exist")
         }
+        return file
     }
 
     private fun askExternalStoragePermission() {
-//        ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), PERMISSION_EXTERNAL_STORAGE_REQ_CODE)
-
         //launch the permission
         externalStoragePermission.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
     }
-
-//    private fun snackBar(text: String) {
-//        val snackBar = view?.let {
-//            Snackbar.make(
-//                it, text,
-//                Snackbar.LENGTH_LONG
-//            ).setAction("Action", null)
-//        }
-//        snackBar?.setActionTextColor(requireContext().getColor(R.color.black))
-//        val snackBarView = snackBar?.view
-//        snackBarView?.setBackgroundColor(requireContext().getColor(R.color.rich_red))
-//        snackBar?.show()
-//    }
-
-//    private fun openSettings() {
-//        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-//            addCategory(Intent.CATEGORY_DEFAULT)
-//            data = Uri.parse("package:$`package`")
-//        }.run(::startActivity)
-//    }
 
     private fun gotoSettings() {
         AlertDialog.Builder(requireContext())
@@ -208,11 +176,7 @@ class FirstFragment : Fragment() {
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     startActivity(intent)
                 } catch (e: Exception) {
-                    Toast.makeText(
-                        requireContext(),
-                        "failed to open Settings\n$e",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    binding.root.snackBar("failed to open Settings")
                     Log.d("error", e.toString())
                 }
             }).create().show()
