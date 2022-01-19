@@ -18,6 +18,8 @@ import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import com.example.tempdirectory.databinding.FragmentFirstBinding
 import com.example.tempdirectory.util.snackBar
+import android.os.Environment
+import java.io.File
 
 
 class FirstFragment : Fragment() {
@@ -62,10 +64,12 @@ class FirstFragment : Fragment() {
                 when {
                     granted -> {
                         snackBar("Permission granted!")
-
+                        if (folderName != "") {
+                            createFolder(folderName)
+                        }else {
+                            Toast.makeText(requireContext(), "Enter folder name first", Toast.LENGTH_SHORT).show()
+                        }
                     }
-
-
 //                    shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE) -> {
 //                        //this option is available starting in API 23
 //                        snackBar("Permission denied, show more info!")
@@ -105,7 +109,11 @@ class FirstFragment : Fragment() {
             //check if WRITE permission is granted
             if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                 //Permission is granted!! .. Create Folder
-                createFolder()
+                    if (folderName != "") {
+                        createFolder(folderName)
+                    }else {
+                        Toast.makeText(requireContext(), "Enter folder name first", Toast.LENGTH_SHORT).show()
+                    }
             } else {
                 //Todo: if permissions Denied permanently by user..
                 askExternalStoragePermission()
@@ -116,13 +124,44 @@ class FirstFragment : Fragment() {
         * Open Folder
         * */
         binding.btnOpen.setOnClickListener {
-
+            //get folder name from et
+            folderName = binding.tipFolderName.editText?.text.toString().trim()
+            //Initialize uri
+            val uri = Uri.parse("${Environment.getExternalStorageDirectory()}/$folderName/")
+            //open file manager
+            startActivity(Intent(Intent.ACTION_GET_CONTENT)
+                .setDataAndType(uri, "*/*")
+            )
         }
     }
 
-    private fun createFolder() {
+    private fun createFolder(folderName: String) {
+        /*
+        * old approach - which isn't working
+        * */
         //Initialize file
 //        var file: File = File(Environment.getExternal(), folderName)
+        val file = File(Environment.getExternalStorageDirectory(), folderName)
+
+        if (!file.exists()) {
+            //create new directory
+            file.mkdir()
+            //check condition
+            if (file.isDirectory) {
+                //when directory is created
+                Toast.makeText(requireContext(), "Successfully created: $folderName", Toast.LENGTH_SHORT).show()
+            } else {
+                //when directory is not created..display Alert dialog
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Go to Settings")
+                    .setMessage("Message: failed to create directory " +
+                            "\nPath : ${Environment.getExternalStorageDirectory()}" +
+                            "\nmkdirs : ${file.mkdirs()}")
+                    .show()
+            }
+        } else {
+            Toast.makeText(requireContext(), "Folder Already Exists", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun askExternalStoragePermission() {
@@ -156,6 +195,9 @@ class FirstFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle("Go to Settings")
             .setMessage("enable the permission")
+            .setNegativeButton("cancel", DialogInterface.OnClickListener { dialogInterface, i ->
+                dialogInterface.dismiss()
+            })
             .setPositiveButton("Ok", DialogInterface.OnClickListener { dialogInterface, i ->
                 Toast.makeText(requireContext(), "Moving to Settings", Toast.LENGTH_SHORT).show()
                 try {
