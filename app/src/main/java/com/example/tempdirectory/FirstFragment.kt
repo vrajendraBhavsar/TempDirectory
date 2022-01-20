@@ -25,6 +25,10 @@ import com.example.tempdirectory.util.snackBar
 import com.example.tempdirectory.worker.DeleteFolderWorker
 import java.io.File
 import java.util.concurrent.TimeUnit
+import android.content.ActivityNotFoundException
+
+import android.os.Environment
+import androidx.core.content.FileProvider
 
 
 class FirstFragment : Fragment(), LifecycleObserver {
@@ -108,16 +112,48 @@ class FirstFragment : Fragment(), LifecycleObserver {
 
         binding.btnOpen.setOnClickListener {
             //get folder name from et
-            folderName = binding.tipFolderName.editText?.text.toString().trim()
-            //Initialize uri
-            val uri = Uri.parse("${context?.getExternalFilesDir(null)}/$folderName/")
-            //open file manager
-            startActivity(
-                Intent(Intent.ACTION_GET_CONTENT)
-                    .setDataAndType(uri, "*/*")
-            )
-        }
+//            folderName = binding.tipFolderName.editText?.text.toString().trim()
+//            //Initialize uri
+//            val uri = Uri.parse("${context?.getExternalFilesDir(null)}/$folderName/")
+//            //open file manager
+//            startActivity(
+//                Intent(Intent.ACTION_VIEW)
+//                    .setDataAndType(uri, "*/*")
+//            )
+//.................
+//            file = File("${requireContext().getExternalFilesDir(null)}/$folderName")
+//
+////            val path = Uri.fromFile(file)
+//            val path = FileProvider.getUriForFile(requireContext(),"com.example.tempdirectory.fileprovider",file);
+//
+//            val pdfOpenintent = Intent(Intent.ACTION_VIEW)
+//            pdfOpenintent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+////            pdfOpenintent.setDataAndType(path, "application/pdf")
+//            pdfOpenintent.setDataAndType(path, "*/*")
+//            try {
+//                startActivity(pdfOpenintent)
+//            } catch (e: ActivityNotFoundException) {
+//            }
+//..................
+//            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+//                //if you want to open PDF file
+//                type = "*/*"
+//                addCategory(Intent.CATEGORY_OPENABLE)
+//                //Adding Read URI permission
+//                flags = flags or Intent.FLAG_GRANT_READ_URI_PERMISSION
+//            }
+            //................
+            val path = "${context?.getExternalFilesDir(null)}/$folderName/"
+            //initialize uri
+//            val uri = Uri.parse("${context?.getExternalFilesDir(null)}/$folderName/")
+            val uri: Uri = Uri.parse(path)
+            //initialize intent
+            var intent = Intent(Intent.ACTION_PICK)
+                .setDataAndType(uri, "*/*")
+            //start activity
+            startActivity(intent)
 
+        }
         /*binding.btnDelete.setOnClickListener {
             deleteFolder()
         }*/
