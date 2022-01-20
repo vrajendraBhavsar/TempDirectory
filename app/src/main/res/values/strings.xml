@@ -14,5 +14,6 @@
     <!--First Fragment-->
     <string name="btn_create">Create</string>
     <string name="btn_open">Open</string>
+    <string name="btn_delete">Delete</string>
 
 </resources>
