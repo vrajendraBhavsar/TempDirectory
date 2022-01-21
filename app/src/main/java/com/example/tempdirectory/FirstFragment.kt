@@ -23,12 +23,11 @@ import androidx.work.WorkManager
 import com.example.tempdirectory.databinding.FragmentFirstBinding
 import com.example.tempdirectory.util.snackBar
 import com.example.tempdirectory.worker.DeleteFolderWorker
-import java.io.File
+import java.io.*
+import java.nio.channels.FileChannel
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
-import android.content.ActivityNotFoundException
-
-import android.os.Environment
-import androidx.core.content.FileProvider
 
 
 class FirstFragment : Fragment(), LifecycleObserver {
@@ -160,6 +159,9 @@ class FirstFragment : Fragment(), LifecycleObserver {
     }
 
     private fun createFolder(folderName: String): File {
+
+        chooseFileFromDevice()
+
         //Initialize file
         file = File("${requireContext().getExternalFilesDir(null)}/$folderName")
         if (!file.exists()) {
@@ -172,6 +174,99 @@ class FirstFragment : Fragment(), LifecycleObserver {
         return file
     }
 
+    //....... to receive file path which user open during "CreateFolder"
+    private var resultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+//            if (result.resultCode == Activity.RESULT_OK) {
+//                // There are no request codes
+////            val data: Intent? = result.data
+//            val uriOfSelectedFile: Uri? = result.data?.data
+//                val uriPath = uriOfSelectedFile?.path
+//
+////                val getPath = uriOfSelectedFile?.let { getPath(it) }
+//
+//                //....
+//            val intent = Intent(Intent.ACTION_PICK)
+//                .setDataAndType(uriOfSelectedFile, "*/*")
+//            //start activity
+//            startActivity(intent)
+//                //..
+//
+//                Log.d("VRAJTEST", "197: Uri of User Selected file:: $uriOfSelectedFile")
+//                Log.d("VRAJTEST", "198: Path of User Selected file:: $uriPath")
+////                Log.d("VRAJTEST", "198: getPath fun result:: $getPath")
+//            }
+            //....from scoped storage project
+            //Permission needed if you want to retain access even after reboot
+            result?.data?.data?.let { documentUri ->
+                context?.contentResolver?.takePersistableUriPermission(
+                    documentUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                Toast.makeText(requireContext(), documentUri.path.toString(), Toast.LENGTH_LONG).show()
+            }
+        }
+
+/*    private fun getPath(uri: Uri): String? {
+
+        var path: String  = "";
+        val projection: Array<String> = arrayOf(MediaStore.Files.FileColumns.DATA)
+        val cursor: Cursor? = context?.contentResolver?.query(uri, projection, null, null, null);
+
+        if(cursor == null){
+            path = uri.path!!
+        }
+        else{
+            cursor.moveToFirst();
+            val column_index: Int = cursor.getColumnIndexOrThrow(projection[0]);
+            path = cursor.getString(column_index);
+            cursor.close();
+        }
+
+        if(path == null || path.isEmpty()) {
+            return uri.path
+        } else {
+            return path
+        }
+//        return ((path == null || path.isEmpty()) ? (uri.getPath()) : path);
+    }*/
+
+//    private fun getRealPathFromURI(contentUri: Uri?): String? {
+//        var cursor: Cursor? = null
+//        return try {
+//            val proj = arrayOf(MediaStore.Images.Media.DATA)
+//            cursor = contentUri?.let { context?.contentResolver?.query(it, proj, null, null, null) }
+//            val columnIndex: Int? = cursor?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+//            cursor?.moveToFirst()
+//            columnIndex?.let { cursor?.getString(it) }
+//        } finally {
+//            if (cursor != null) {
+//                cursor.close()
+//            }
+//        }
+//    }
+
+    fun chooseFileFromDevice() {
+//        var chooseFileIntent = Intent(Intent.ACTION_GET_CONTENT)
+//        chooseFileIntent.type = "*/*"
+//        chooseFileIntent = Intent.createChooser(chooseFileIntent, "Choose a file")
+////        startActivityForResult(chooseFile, PICKFILE_RESULT_CODE)
+//
+        //....from scoped storage project
+
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            //if you want to open PDF file
+            type = "*/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+            //Adding Read URI permission
+            flags = flags or Intent.FLAG_GRANT_READ_URI_PERMISSION
+        }
+
+
+        resultLauncher.launch(intent)
+    }
+
+    //...........
     fun deleteFolder() {
         //get folder name from et
         folderName = binding.tipFolderName.editText?.text.toString().trim()
@@ -247,6 +342,33 @@ class FirstFragment : Fragment(), LifecycleObserver {
                     Log.d("error", e.toString())
                 }
             }).create().show()
+    }
+
+    @Throws(IOException::class)
+    private fun exportFile(src: File, dst: File): File? {
+        //if folder does not exist
+        if (!dst.exists()) {
+            if (!dst.mkdir()) {
+                return null
+            }
+        }
+        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+        val expFile = File(dst.path + File.separator + "IMG_" + timeStamp + ".jpg")
+        var inChannel: FileChannel? = null
+        var outChannel: FileChannel? = null
+        try {
+            inChannel = FileInputStream(src).channel
+            outChannel = FileOutputStream(expFile).channel
+        } catch (e: FileNotFoundException) {
+            e.printStackTrace()
+        }
+        try {
+            inChannel?.transferTo(0, inChannel.size(), outChannel)
+        } finally {
+            if (inChannel != null) inChannel.close()
+            if (outChannel != null) outChannel.close()
+        }
+        return expFile
     }
 
     override fun onStart() {
